@@ -757,37 +757,22 @@
   });
 
   // ---------- Share to X ----------
-  const CAPTION = "just locked in my HH GOA 2026 badge \u2600\ufe0f #FrameInGoa";
+  function buildShareCaption() {
+    const name = (state.name || "").trim();
+    const descriptor = state.format === "card"
+      ? `${name ? `${name} is showing off their` : "I’m showing off my"} Builder ID for HH GOA 2026`
+      : `${name ? `${name} is showing off their` : "I’m showing off my"} PFP frame for HH GOA 2026`;
+
+    return `${descriptor} ✨ #FrameInGoa #HHGOA2026`;
+  }
 
   shareBtn.addEventListener("click", async () => {
     if (!state.img) return;
-    const blob = await canvasToBlob();
-    if (!blob) { toast("couldn't generate the image — try again"); return; }
-    const file = new File([blob], currentFilename(), { type: "image/png" });
 
-    // Mobile native share sheet with file
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], text: CAPTION });
-        shareStatus.textContent = "";
-        return;
-      } catch (err) {
-        if (err && err.name === "AbortError") return;
-      }
-    }
-
-    // Desktop intent-link fallback
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = currentFilename();
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(CAPTION)}`;
-    window.open(tweetUrl, "_blank", "noopener,noreferrer");
-    shareStatus.textContent = "image saved — attach it to the tweet that just opened";
+    const caption = buildShareCaption();
+    const shareUrl = `https://x.com/intent/post?text=${encodeURIComponent(caption)}`;
+    window.open(shareUrl, "_blank", "noopener,noreferrer");
+    shareStatus.textContent = "opening X composer…";
+    toast("opening X composer ✨");
   });
 })();
