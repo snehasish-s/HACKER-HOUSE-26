@@ -288,12 +288,21 @@
     }
   }
 
+  function openFilePicker() {
+    if (fileInput) fileInput.click();
+  }
+
   fileInput.addEventListener("change", (e) => {
     if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
   });
-  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("click", () => openFilePicker());
+  dropzone.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openFilePicker();
+  }, { passive: false });
   dropzone.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); }
   });
   ["dragenter", "dragover"].forEach((evt) =>
     dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("is-dragover"); })
@@ -320,28 +329,48 @@
   function pointerPos(e) {
     const rect = canvas.getBoundingClientRect();
     const scale = canvasScale();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    if (e.touches && e.touches.length) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    }
     return { x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale };
   }
-  canvas.addEventListener("pointerdown", (e) => {
+
+  function startCanvasDrag(e) {
     if (!state.img) return;
+    e.preventDefault();
     state.dragging = true;
     state.dragStart = pointerPos(e);
     state.panStart = { ...state.pan };
-    canvas.setPointerCapture(e.pointerId);
-  });
-  canvas.addEventListener("pointermove", (e) => {
+    if (e.pointerId !== undefined) canvas.setPointerCapture(e.pointerId);
+  }
+
+  function moveCanvasDrag(e) {
     if (!state.dragging) return;
+    e.preventDefault();
     const p = pointerPos(e);
     state.pan = {
       x: state.panStart.x + (p.x - state.dragStart.x),
       y: state.panStart.y + (p.y - state.dragStart.y),
     };
     render();
-  });
-  ["pointerup", "pointercancel", "pointerleave"].forEach((evt) =>
-    canvas.addEventListener(evt, () => { state.dragging = false; })
+  }
+
+  function stopCanvasDrag() {
+    state.dragging = false;
+  }
+
+  canvas.addEventListener("pointerdown", startCanvasDrag);
+  canvas.addEventListener("pointermove", moveCanvasDrag);
+  canvas.addEventListener("touchstart", startCanvasDrag, { passive: false });
+  canvas.addEventListener("touchmove", moveCanvasDrag, { passive: false });
+  ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel"].forEach((evt) =>
+    canvas.addEventListener(evt, stopCanvasDrag)
   );
 
   /* ========== DRAWING HELPERS ========== */
