@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>HH GOA 2026 — Frame & Badge Studio</title>
+<meta name="description" content="Upload a photo, get your HH GOA 2026 PFP frame or Builder ID card back in seconds. No login wall. No signup gate. #FrameInGoa" />
+
+<meta property="og:title" content="HH GOA 2026 — Get Your Badge" />
+<meta property="og:description" content="Upload a pic, get your HH GOA 2026 badge. No login, no waitlist, just vibes." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥥%3C/text%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Kalam:wght@400;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Animated background floating particles -->
+<canvas id="particles-canvas" aria-hidden="true"></canvas>
+
+<!-- Paper / Noise overlay for tactile texture -->
+<div class="grain" aria-hidden="true"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="brand-mark">🥥</span>
+    <span class="brand-word">
+      <span class="brand-hh">HACKER HOUSE</span>
+      <span class="brand-goa">गोवा</span>
+      <span class="brand-year">'26</span>
+    </span>
+  </div>
+  <div class="postmark" aria-hidden="true">
+    <div class="postmark__ring">
+      <span>POSTED&nbsp;FROM&nbsp;GOA</span>
+    </div>
+    <span class="postmark__coords">15.30°N&nbsp;74.12°E</span>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">
+        <span class="dot-pulse"></span>
+        28–31 OCT 2026 · GOA, INDIA
+      </p>
+      <h1 class="hero__title">
+        Wish You Were<br/>
+        <span class="hl">Shipping Here.</span>
+      </h1>
+      <p class="hero__sub">
+        Drop a photo, get a badge that actually looks like it's from the beach.
+        Slap it on as your X profile picture or flex the full Builder ID.
+        Nothing to sign up for — instant results.
+      </p>
+      <div class="hero__tapes" aria-hidden="true">
+        <span class="tape tape--pink">🌴 No Login</span>
+        <span class="tape tape--yellow">⚡ Instant Pass</span>
+        <span class="tape tape--green">🏖️ Goa Vibes</span>
+      </div>
+    </div>
+
+    <div class="hero__art" aria-hidden="true">
+      <div class="polaroid polaroid--hero">
+        <div class="washi washi--tl"></div>
+        <div class="polaroid__photo">🏖️</div>
+        <div class="polaroid__cap">Your Name Here</div>
+        <div class="polaroid__sub">☆ Full-Stack Drifter ☆</div>
+      </div>
+      <div class="doodle-arrow">upload → vibe</div>
+    </div>
+  </section>
+
+  <!-- STUDIO -->
+  <section class="studio" id="studio">
+
+    <div class="studio__route" aria-hidden="true">
+      <span class="route__step is-active" id="step-1"><b>01</b> drop photo</span>
+      <span class="route__line"></span>
+      <span class="route__step" id="step-2"><b>02</b> pick format</span>
+      <span class="route__line"></span>
+      <span class="route__step" id="step-3"><b>03</b> download &amp; post</span>
+    </div>
+
+    <!-- FORMAT TOGGLE -->
+    <div class="format-toggle" role="tablist" aria-label="Badge format">
+      <button class="format-toggle__btn is-active" id="fmt-frame" role="tab" aria-selected="true" type="button">
+        🪩 PFP Frame
+      </button>
+      <button class="format-toggle__btn" id="fmt-card" role="tab" aria-selected="false" type="button">
+        🎟️ Builder ID
+      </button>
+    </div>
+
+    <div class="studio__grid">
+
+      <!-- LEFT: CONTROLS PANEL -->
+      <div class="panel controls-panel">
+        <div class="washi washi--panel"></div>
+
+        <div class="field-block" id="dropzone-block">
+          <span class="field-label">YOUR FACE / FIT / FURSONA</span>
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload a photo">
+            <div class="dropzone__doodle">🐚</div>
+            <p class="dropzone__title" id="dropzone-title">drop a pic or tap here</p>
+            <p class="dropzone__hint">JPG, PNG, WebP, or straight off your iPhone (.heic)</p>
+            <input type="file" id="file-input" accept="image/*,.heic,.heif" hidden />
+          </div>
+          <p class="hint-line" id="upload-status" aria-live="polite"></p>
+        </div>
+
+        <div class="field-block" id="reposition-block" hidden>
+          <span class="field-label">NUDGE IT INTO PLACE</span>
+          <p class="hint-line">Drag photo on preview to reposition. Zoom below.</p>
+          <div class="zoom-row">
+            <span class="zoom-icon">🔍</span>
+            <input type="range" id="zoom-range" min="100" max="260" value="100" />
+            <span class="zoom-val" id="zoom-val">1.0×</span>
+          </div>
+        </div>
+
+        <div class="field-block" id="card-fields-block" hidden>
+          <span class="field-label" for="name-input">WHAT DO WE CALL YOU</span>
+          <input type="text" id="name-input" class="text-input" placeholder="e.g. Priya" maxlength="22" />
+
+          <span class="field-label" for="role-select">YOUR STACK / ROLE</span>
+          <select id="role-select" class="select-input">
+            <option>Full-Stack / React</option>
+            <option>Solana / Rust</option>
+            <option>Ethereum / Solidity</option>
+            <option>AI / ML</option>
+            <option>Design / UI</option>
+            <option>Product / Growth</option>
+            <option>Hardware / IoT</option>
+            <option>DevOps / Infra</option>
+            <option>Mobile / Flutter</option>
+            <option>Just Vibes</option>
+          </select>
+
+          <span class="field-label">YOUR BUILDER TITLE</span>
+          <div class="title-row">
+            <div class="title-chip" id="title-chip">Certified Tab-Hoarder</div>
+            <button class="dice-btn" id="reroll-btn" type="button" aria-label="Reroll builder title" title="Click to spin the dice!">
+              <span class="dice-icon">🎲</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: PREVIEW PANEL -->
+      <div class="panel preview-panel">
+        <div class="preview-stage">
+          <div class="polaroid" id="badge-frame">
+            <div class="washi washi--pin"></div>
+            <canvas id="badge-canvas" width="1080" height="1080"></canvas>
+            <div class="empty-state" id="empty-state">
+              <span class="empty-emoji">🫧</span>
+              <p class="empty-title">your badge shows up here</p>
+              <p class="empty-sub">upload a photo to start</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn--ghost" id="download-btn" type="button" disabled>
+            ⬇ Save Image
+          </button>
+          <button class="btn btn--primary" id="share-btn" type="button" disabled>
+            𝕏 Post to 𝕏
+          </button>
+        </div>
+        <p class="hint-line" id="share-status" aria-live="polite"></p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <p class="footer-word">#FrameInGoa</p>
+    <p class="footer-fine">
+      Fan-built badge studio for the HH GOA 2026 shortlisting round · 
+      Not an official HH GOA product · Goa, India · 28–31 Oct 2026
+    </p>
+  </footer>
+
+</main>
+
+<!-- Confetti overlay -->
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- HEIC → JPEG decoder for iPhone photos -->
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
