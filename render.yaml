@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: hh-goa-2026
+    runtime: static
+    staticPublishPath: ./
