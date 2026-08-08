@@ -892,13 +892,15 @@
   });
 
   // ---------- Share to X ----------
+  const RENDER_URL = "https://hacker-house-govaa-26-h8ar.onrender.com";
+
   function buildShareCaption() {
     const name = (state.name || "").trim();
     const descriptor = state.format === "card"
       ? `${name ? `${name} is showing off their` : "I’m showing off my"} Builder ID for HH GOA 2026`
       : `${name ? `${name} is showing off their` : "I’m showing off my"} PFP frame for HH GOA 2026`;
 
-    return `${descriptor} ✨ #FrameInGoa #HHGOA2026`;
+    return `${descriptor} ✨\n\nBuilt with the HH Goa 2026 frame generator.\n${RENDER_URL}\n\n#FrameInGoa #HHGOA2026 #HackerHouseGoa #GoaBuilders`;
   }
 
   shareBtn.addEventListener("click", async () => {
