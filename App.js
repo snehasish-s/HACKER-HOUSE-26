@@ -8,6 +8,7 @@
   "use strict";
 
   const CANVAS_SIZE = 1080;
+  const FRAME_ASSET = "builder-pass-frame.png.jpeg";
 
   /* ---- HH Goa Palette ---- */
   const COLORS = {
@@ -38,6 +39,10 @@
     "Midnight Oil Burner", "Goa State of Mind", "Git Push & Chill",
   ];
 
+  function createRegistrationNumber() {
+    return `HHG-26-${Math.floor(100000 + Math.random() * 900000)}`;
+  }
+
   const state = {
     format: "frame",      // 'frame' | 'card'
     img: null,            // HTMLImageElement
@@ -48,6 +53,8 @@
     panStart: null,
     name: "",
     role: "Full-Stack / React",
+    stack: ["", "", "", ""],
+    registration: createRegistrationNumber(),
     title: TITLES[0],
     hasRendered: false,
   };
@@ -64,6 +71,7 @@
   const cardFieldsBlock = $("card-fields-block");
   const nameInput       = $("name-input");
   const roleSelect      = $("role-select");
+  const stackInputs     = [1, 2, 3, 4].map((index) => $(`stack-input-${index}`));
   const titleChip       = $("title-chip");
   const rerollBtn       = $("reroll-btn");
   const canvas          = $("badge-canvas");
@@ -78,6 +86,8 @@
   const step1           = $("step-1");
   const step2           = $("step-2");
   const step3           = $("step-3");
+  const frameImage      = new Image();
+  frameImage.src = FRAME_ASSET;
 
   /* ========== BACKGROUND PARTICLES ========== */
   const particlesCanvas = $("particles-canvas");
@@ -235,6 +245,12 @@
 
   nameInput.addEventListener("input", () => { state.name = nameInput.value; render(); });
   roleSelect.addEventListener("change", () => { state.role = roleSelect.value; render(); });
+  stackInputs.forEach((input, index) => {
+    input.addEventListener("input", () => {
+      state.stack[index] = input.value;
+      render();
+    });
+  });
 
   /* ========== UPLOAD HANDLING ========== */
   function isHeic(file) {
@@ -324,7 +340,7 @@
   /* ========== CANVAS PAN (DRAG TO REPOSITION) ========== */
   function canvasScale() {
     const rect = canvas.getBoundingClientRect();
-    return CANVAS_SIZE / rect.width;
+    return canvas.width / rect.width;
   }
   function pointerPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -435,6 +451,32 @@
       for (let j = 0; j < rows; j++) {
         if ((i + j * 3) % 5 !== 0) {
           c.fillRect(x + i * cell, y + j * cell, cell * 0.55, cell * 0.55);
+        }
+      }
+    }
+    c.restore();
+  }
+
+  function drawVerificationCode(c, x, y, size, value) {
+    const cells = 13;
+    const cell = size / cells;
+    let seed = 0;
+    for (const character of value) seed = (seed * 31 + character.charCodeAt(0)) >>> 0;
+    c.save();
+    c.fillStyle = COLORS.paper;
+    c.fillRect(x, y, size, size);
+    c.strokeStyle = COLORS.ink;
+    c.lineWidth = 4;
+    c.strokeRect(x, y, size, size);
+    c.fillStyle = COLORS.ink;
+    for (let row = 0; row < cells; row++) {
+      for (let column = 0; column < cells; column++) {
+        const finder = (column < 5 && row < 5) || (column > 7 && row < 5) || (column < 5 && row > 7);
+        const edge = column === 0 || column === 4 || row === 0 || row === 4;
+        const center = column >= 1 && column <= 3 && row >= 1 && row <= 3;
+        const bit = ((seed >>> ((row * cells + column) % 24)) & 1) === 1;
+        if ((finder && (edge || center)) || (!finder && bit)) {
+          c.fillRect(x + column * cell, y + row * cell, Math.ceil(cell), Math.ceil(cell));
         }
       }
     }
@@ -552,174 +594,267 @@
     // Washi tape corner accents
     drawWashiTape(ctx, 65, 42, 130, 46, COLORS.yellow, -8);
     drawWashiTape(ctx, S - 215, S - 92, 130, 46, COLORS.pink, 6);
+
+    ctx.save();
+    ctx.fillStyle = COLORS.ink;
+    roundRectPath(ctx, 690, 50, 300, 52, 8);
+    ctx.fill();
+    ctx.fillStyle = COLORS.yellow;
+    ctx.font = "700 19px 'Space Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(state.registration, 840, 76);
+    ctx.restore();
   }
 
   /* ========== RENDER: FORMAT B — BUILDER ID CARD ========== */
   function renderCard() {
-    const S = CANVAS_SIZE;
-    ctx.clearRect(0, 0, S, S);
+    let W = frameImage.naturalWidth || 1024;
+    let H = frameImage.naturalHeight || 1536;
+    canvas.width = W;
+    canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
 
-    // Card background
-    ctx.fillStyle = COLORS.paper;
-    ctx.fillRect(0, 0, S, S);
+    if (frameImage.complete && frameImage.naturalWidth) {
+      ctx.drawImage(frameImage, 0, 0, W, H);
 
-    const margin = 46;
-    ctx.save();
-    roundRectPath(ctx, margin, margin, S - margin * 2, S - margin * 2, 30);
-    ctx.fillStyle = COLORS.paper2;
-    ctx.fill();
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = COLORS.ink;
-    ctx.stroke();
-    ctx.restore();
+      // The supplied JPEG is the finished pass; only replace its blank portrait window.
+      if (state.img) {
+        const photoX = 345, photoY = 449, photoW = 334, photoH = 365;
+        ctx.save();
+        roundRectPath(ctx, photoX, photoY, photoW, photoH, 28);
+        ctx.clip();
+        drawCoveredImage(ctx, state.img, photoX, photoY, photoW, photoH, state.pan.x, state.pan.y, state.zoom);
+        ctx.restore();
+      }
 
-    // Pink header strip
-    const hdrH = 130;
-    ctx.save();
-    roundRectPath(ctx, margin, margin, S - margin * 2, hdrH, { tl: 30, tr: 30, br: 0, bl: 0 });
-    ctx.fillStyle = COLORS.pink;
-    ctx.fill();
-    ctx.restore();
-
-    // Header text
-    ctx.save();
-    ctx.fillStyle = COLORS.white;
-    ctx.font = "800 46px Fraunces, Georgia, serif";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText("HH GOA", margin + 40, margin + 65);
-    ctx.font = "italic 700 46px Fraunces, Georgia, serif";
-    ctx.fillStyle = COLORS.yellow;
-    ctx.fillText("'26", margin + 40 + ctx.measureText("HH GOA ").width + 178, margin + 65);
-
-    ctx.font = "700 15px 'Space Mono', monospace";
-    ctx.fillStyle = COLORS.white;
-    ctx.textAlign = "right";
-    ctx.fillText("BUILDER ID", S - margin - 40, margin + 46);
-    ctx.fillText("28\u201331 OCT", S - margin - 40, margin + 78);
-    ctx.restore();
-
-    // Photo box
-    const photoX = margin + 60;
-    const photoY = margin + 168;
-    const photoW = S - (margin + 60) * 2;
-    const photoH = 430;
-
-    ctx.save();
-    roundRectPath(ctx, photoX, photoY, photoW, photoH, 16);
-    ctx.clip();
-    if (state.img) {
-      drawCoveredImage(ctx, state.img, photoX, photoY, photoW, photoH, state.pan.x, state.pan.y, state.zoom);
-    } else {
-      ctx.fillStyle = COLORS.paper;
-      ctx.fillRect(photoX, photoY, photoW, photoH);
+      const liveText = (value, x, y, font, color = COLORS.ink, align = "left") => {
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.textBaseline = "middle";
+        ctx.fillText(value, x, y);
+      };
+      if (state.name) {
+        liveText(state.name.toUpperCase(), 210, 945, "800 40px Outfit, sans-serif");
+        liveText(state.role.toUpperCase(), 210, 984, "700 34px 'Space Mono', monospace", COLORS.green);
+      }
+      liveText(state.registration, 868, 58, "700 14px 'Space Mono', monospace", COLORS.paper, "center");
+      const stackBoxes = [140, 300, 460, 620];
+      state.stack.forEach((value, index) => {
+        if (value.trim()) liveText(value.trim().toUpperCase(), stackBoxes[index] + 70, 1245, "700 16px 'Space Mono', monospace", COLORS.ink, "center");
+      });
+      drawVerificationCode(ctx, 48, 1420, 106, `${state.name}|${state.role}|${state.stack.join("|")}|HHGOA2026`);
+      let titleSize = 22;
+      const titleText = state.title.toUpperCase();
+      ctx.font = `800 ${titleSize}px Outfit, sans-serif`;
+      while (ctx.measureText(titleText).width > 350 && titleSize > 14) {
+        titleSize -= 1;
+        ctx.font = `800 ${titleSize}px Outfit, sans-serif`;
+      }
+      liveText(titleText, 205, 1150, `800 ${titleSize}px Outfit, sans-serif`, COLORS.paper);
+      return;
     }
+
+    W = 900;
+    H = 1350;
+    const margin = 28;
+    ctx.fillStyle = COLORS.paper;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 6;
+    roundRectPath(ctx, margin, margin, W - margin * 2, H - margin * 2, 22);
+    ctx.stroke();
+
+    const text = (value, x, y, font, color = COLORS.ink, align = "left") => {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      ctx.fillText(value, x, y);
+    };
+    const band = (x, y, w, h, color, radius = 10) => {
+      ctx.fillStyle = color;
+      roundRectPath(ctx, x, y, w, h, radius);
+      ctx.fill();
+    };
+
+    ctx.fillStyle = COLORS.ink;
+    ctx.fillRect(margin, margin, W - margin * 2, 66);
+    text("OFFICIAL BUILDER PASS", 54, 62, "700 22px 'Space Mono', monospace", COLORS.paper);
+    band(380, 0, 140, 166, COLORS.pink, 0);
+    ctx.strokeStyle = COLORS.yellow;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(380, 0, 140, 166);
+    text("HH", 450, 48, "800 34px Outfit, sans-serif", COLORS.yellow, "center");
+    text("GOA", 450, 84, "800 34px Outfit, sans-serif", COLORS.yellow, "center");
+    text("2026", 450, 126, "800 28px 'Space Mono', monospace", COLORS.paper, "center");
+
+    text("HACKER HOUSE", W / 2, 258, "800 78px Fraunces, Georgia, serif", COLORS.ink, "center");
+    band(228, 304, 444, 52, COLORS.ink, 4);
+    text("GOA", 270, 330, "800 30px Outfit, sans-serif", COLORS.paper, "center");
+    band(330, 304, 120, 52, COLORS.pink, 0);
+    text("2026", 390, 330, "800 30px Outfit, sans-serif", COLORS.paper, "center");
+    text("BUILD  •  SHIP  •  REPEAT", 584, 330, "800 20px 'Space Mono', monospace", COLORS.ink, "center");
+
+    // Reference artwork: Goa landscape, side date rail, and verification seal.
+    ctx.fillStyle = COLORS.ink;
+    ctx.fillRect(28, 380, 72, 440);
+    ctx.save();
+    ctx.translate(64, 760);
+    ctx.rotate(-Math.PI / 2);
+    text("GOA, INDIA  •  OCT 28–31, 2026", 0, 0, "700 15px 'Space Mono', monospace", COLORS.paper, "center");
+    ctx.restore();
+    ctx.fillStyle = COLORS.yellow;
+    ctx.beginPath();
+    ctx.arc(64, 415, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lighthouse silhouette.
+    ctx.fillStyle = COLORS.pink;
+    ctx.beginPath();
+    ctx.moveTo(122, 688); ctx.lineTo(208, 688); ctx.lineTo(194, 512); ctx.lineTo(140, 512); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = COLORS.ink;
+    ctx.fillRect(133, 486, 68, 30);
+    ctx.fillRect(153, 456, 28, 30);
+    ctx.beginPath(); ctx.arc(167, 449, 18, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 7;
+    for (let y = 535; y < 670; y += 30) {
+      ctx.beginPath(); ctx.moveTo(132, y); ctx.lineTo(198, y - 8); ctx.stroke();
+    }
+    ctx.fillStyle = COLORS.green;
+    ctx.beginPath(); ctx.moveTo(104, 692); ctx.quadraticCurveTo(168, 650, 244, 694); ctx.lineTo(244, 758); ctx.lineTo(104, 758); ctx.closePath(); ctx.fill();
+
+    // Palm and sun on the right side of the photo window.
+    ctx.fillStyle = COLORS.yellow;
+    ctx.beginPath(); ctx.arc(762, 570, 86, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 13;
+    ctx.beginPath(); ctx.moveTo(770, 758); ctx.quadraticCurveTo(760, 660, 786, 530); ctx.stroke();
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(786, 538); ctx.quadraticCurveTo(730, 476, 694, 490); ctx.moveTo(786, 538); ctx.quadraticCurveTo(776, 460, 792, 432); ctx.moveTo(786, 538); ctx.quadraticCurveTo(840, 478, 884, 492); ctx.moveTo(786, 538); ctx.quadraticCurveTo(852, 528, 892, 562); ctx.stroke();
+    ctx.fillStyle = COLORS.ink;
+    ctx.beginPath(); ctx.moveTo(706, 760); ctx.lineTo(755, 620); ctx.lineTo(797, 760); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = COLORS.yellow;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(758, 720); ctx.lineTo(773, 680); ctx.lineTo(758, 686); ctx.lineTo(778, 646); ctx.stroke();
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 5;
+    for (let y = 704; y < 762; y += 22) {
+      ctx.beginPath(); ctx.moveTo(104, y); ctx.quadraticCurveTo(150, y - 18, 200, y); ctx.quadraticCurveTo(250, y + 18, 300, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(650, y); ctx.quadraticCurveTo(700, y - 18, 750, y); ctx.quadraticCurveTo(800, y + 18, 844, y); ctx.stroke();
+    }
+
+    // Verified builder seal.
+    ctx.save();
+    ctx.translate(752, 238);
+    ctx.rotate(0.15);
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(0, 0, 65, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = COLORS.pink;
+    ctx.beginPath(); ctx.arc(0, 0, 58, 0, Math.PI * 2); ctx.stroke();
+    text("VERIFIED", 0, -22, "700 15px 'Space Mono', monospace", COLORS.ink, "center");
+    text("BUILDER", 0, 38, "700 15px 'Space Mono', monospace", COLORS.ink, "center");
+    ctx.fillStyle = COLORS.ink;
+    ctx.beginPath(); ctx.moveTo(-18, -4); ctx.lineTo(0, 10); ctx.lineTo(24, -20); ctx.lineTo(14, -24); ctx.lineTo(0, -4); ctx.lineTo(-12, -14); ctx.closePath(); ctx.fill();
     ctx.restore();
 
-    // Photo frame borders
+    const photoX = 238, photoY = 410, photoW = 424, photoH = 350;
     ctx.save();
-    roundRectPath(ctx, photoX, photoY, photoW, photoH, 16);
+    roundRectPath(ctx, photoX, photoY, photoW, photoH, 34);
+    ctx.clip();
+    if (state.img) drawCoveredImage(ctx, state.img, photoX, photoY, photoW, photoH, state.pan.x, state.pan.y, state.zoom);
+    else { ctx.fillStyle = COLORS.paper2; ctx.fillRect(photoX, photoY, photoW, photoH); }
+    ctx.restore();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = COLORS.pink;
+    roundRectPath(ctx, photoX, photoY, photoW, photoH, 34);
+    ctx.stroke();
     ctx.lineWidth = 5;
     ctx.strokeStyle = COLORS.ink;
+    roundRectPath(ctx, photoX + 12, photoY + 12, photoW - 24, photoH - 24, 26);
     ctx.stroke();
-    ctx.setLineDash([10, 8]);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = COLORS.pink;
-    roundRectPath(ctx, photoX + 14, photoY + 14, photoW - 28, photoH - 28, 10);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
+    band(538, 394, 138, 48, COLORS.ink, 12);
+    text("● ACTIVE", 607, 418, "700 18px 'Space Mono', monospace", COLORS.yellow, "center");
 
-    // Washi tape mounts on photo
-    drawWashiTape(ctx, photoX + 20, photoY - 18, 110, 40, COLORS.yellow, -6);
-    drawWashiTape(ctx, photoX + photoW - 130, photoY - 18, 110, 40, COLORS.pink, 5);
-
-    // Name text
-    const name = (state.name || "your name here").trim();
-    ctx.save();
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = "700 52px Kalam, cursive";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(name, S / 2, photoY + photoH + 78);
-    ctx.restore();
-
-    // Role pill
-    ctx.save();
-    ctx.font = "700 22px 'Space Mono', monospace";
-    const roleText = state.role.toUpperCase();
-    const roleW = ctx.measureText(roleText).width + 56;
-    roundRectPath(ctx, S / 2 - roleW / 2, photoY + photoH + 100, roleW, 52, 26);
-    ctx.fillStyle = COLORS.green;
-    ctx.fill();
-    ctx.lineWidth = 3;
+    band(104, 808, 692, 154, COLORS.paper, 28);
     ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 6;
+    roundRectPath(ctx, 104, 808, 692, 154, 28);
     ctx.stroke();
-    ctx.fillStyle = COLORS.yellow;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(roleText, S / 2, photoY + photoH + 100 + 27);
+    text("●  BUILDER IDENTITY", 138, 846, "700 20px 'Space Mono', monospace", COLORS.pink);
+    text((state.name || "YOUR NAME HERE").toUpperCase(), 138, 900, "800 30px Outfit, sans-serif", COLORS.ink);
+    text(state.role.toUpperCase(), 138, 932, "700 15px 'Space Mono', monospace", COLORS.green);
+
+    band(102, 984, 600, 102, COLORS.ink, 18);
+    text("✦  AI TITLE", 132, 1020, "700 18px 'Space Mono', monospace", COLORS.yellow);
+    text(state.title.toUpperCase(), 132, 1054, "700 20px Outfit, sans-serif", COLORS.paper);
+    band(706, 984, 92, 102, COLORS.paper, 18);
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 5;
+    roundRectPath(ctx, 706, 984, 92, 102, 18);
+    ctx.stroke();
+    text(">_", 752, 1040, "700 28px 'Space Mono', monospace", COLORS.ink, "center");
+
+    // Approval stamp overlaps the lower information blocks like the supplied pass.
+    ctx.save();
+    ctx.translate(724, 1008);
+    ctx.rotate(-0.22);
+    ctx.strokeStyle = COLORS.pink;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(0, 0, 88, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 78, 0, Math.PI * 2); ctx.stroke();
+    text("GOA • 2026", 0, -40, "700 18px 'Space Mono', monospace", COLORS.pink, "center");
+    text("OFFICIALLY", 0, -6, "800 22px Outfit, sans-serif", COLORS.pink, "center");
+    band(-94, 10, 188, 40, COLORS.pink, 3);
+    text("APPROVED", 0, 30, "800 22px Outfit, sans-serif", COLORS.paper, "center");
     ctx.restore();
 
-    // Dashed tear line
-    const tearY = photoY + photoH + 178;
-    drawDashedLine(ctx, margin + 24, tearY, S - margin - 24, tearY, COLORS.pink, 3, [12, 8]);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(margin, tearY, 16, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS.paper;
-    ctx.fill();
+    text("PRIMARY STACK", 104, 1122, "700 16px 'Space Mono', monospace", COLORS.pink);
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = COLORS.mango;
+      ctx.lineWidth = 3;
+      roundRectPath(ctx, 198 + i * 142, 1100, 124, 42, 10);
+      ctx.stroke();
+    }
     ctx.strokeStyle = COLORS.ink;
     ctx.lineWidth = 4;
-    ctx.stroke();
     ctx.beginPath();
-    ctx.arc(S - margin, tearY, 16, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS.paper;
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    // Builder title chip
-    ctx.save();
-    ctx.font = "700 26px Kalam, cursive";
-    const titleText = state.title;
-    const titleW = Math.min(S - margin * 2 - 60, ctx.measureText(titleText).width + 70);
-    roundRectPath(ctx, S / 2 - titleW / 2, tearY + 26, titleW, 56, 12);
-    ctx.fillStyle = COLORS.yellow;
-    ctx.globalAlpha = 0.45;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.setLineDash([8, 6]);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = COLORS.pink;
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.moveTo(56, 1180); ctx.lineTo(844, 1180); ctx.stroke();
+    text("BUILDS", 180, 1218, "800 20px Outfit, sans-serif", COLORS.ink, "center");
+    text("SHIP MODE", 450, 1218, "800 20px Outfit, sans-serif", COLORS.ink, "center");
+    text("VIBES", 720, 1218, "800 20px Outfit, sans-serif", COLORS.ink, "center");
+    text("∞", 180, 1250, "800 38px Fraunces, Georgia, serif", COLORS.pink, "center");
+    text("ON", 450, 1250, "800 28px Outfit, sans-serif", COLORS.pink, "center");
+    text("HIGH", 720, 1250, "800 28px Outfit, sans-serif", COLORS.pink, "center");
+    // Small sailing mark in the lower-right corner.
     ctx.fillStyle = COLORS.ink;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(titleText, S / 2, tearY + 26 + 30);
-    ctx.restore();
-
-    // Footer: coords + dot grid + hashtag
-    const footerY = tearY + 106;
-    ctx.save();
-    ctx.font = "700 15px 'Space Mono', monospace";
-    ctx.fillStyle = COLORS.inkDim;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText("15.2993\u00b0N  74.1240\u00b0E", margin + 40, footerY);
-    ctx.fillStyle = COLORS.pink;
-    ctx.font = "700 18px 'Space Mono', monospace";
-    ctx.textAlign = "right";
-    ctx.fillText("#FRAMEINGOA", S - margin - 40, footerY);
-    ctx.restore();
-    drawDotGrid(ctx, S / 2 - 60, footerY - 12, 22, 3, 5.5, COLORS.ink);
+    ctx.beginPath(); ctx.moveTo(760, 1280); ctx.lineTo(806, 1242); ctx.lineTo(806, 1290); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = COLORS.yellow;
+    ctx.beginPath(); ctx.moveTo(812, 1288); ctx.lineTo(842, 1262); ctx.lineTo(842, 1292); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(806, 1238); ctx.lineTo(806, 1304); ctx.stroke();
+    ctx.strokeStyle = COLORS.green;
+    ctx.beginPath(); ctx.moveTo(754, 1304); ctx.quadraticCurveTo(800, 1288, 846, 1304); ctx.stroke();
+    ctx.fillStyle = COLORS.ink;
+    for (let i = 0; i < 34; i++) ctx.fillRect(58 + i * 23, 1290, (i % 3) + 2, 34);
+    text("HHG-BUILDER-PASS-2026-VERIFIED", W / 2, 1332, "700 11px 'Space Mono', monospace", COLORS.ink, "center");
   }
 
   function render() {
-    if (state.format === "frame") renderFrame(); else renderCard();
+    if (state.format === "frame") {
+      canvas.width = CANVAS_SIZE;
+      canvas.height = CANVAS_SIZE;
+      renderFrame();
+    } else renderCard();
+    emptyState.classList.toggle("is-hidden", state.format === "card" || !!state.img);
     state.hasRendered = !!state.img;
   }
+
+  frameImage.addEventListener("load", render);
 
   // ---------- Wait for webfonts before initial render ----------
   function bootRender() {
