@@ -26,6 +26,21 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes goa-sun-pulse {
+  0%, 100% { opacity: 0.14; transform: scale(0.94); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
+@keyframes goa-palm-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-5deg); }
+  50% { transform: translate3d(16px, -8px, 0) rotate(5deg); }
+}
+
+@keyframes goa-wave-slide {
+  from { background-position: 0 0; }
+  to { background-position: 88px 0; }
+}
+
 :root {
   /* HH Goa Palette */
   --bg-deep:      #0A4D2C;
@@ -68,6 +83,41 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.goa-motion {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.goa-motion--sun {
+  width: 190px;
+  height: 190px;
+  top: 17vh;
+  right: -62px;
+  border: 2px solid var(--yellow);
+  border-radius: 50%;
+  box-shadow: 0 0 0 12px rgba(255, 215, 0, 0.07), 0 0 64px rgba(255, 215, 0, 0.16);
+  animation: goa-sun-pulse 6s ease-in-out infinite;
+}
+
+.goa-motion--palm {
+  left: 3vw;
+  bottom: 12vh;
+  font-size: 52px;
+  filter: saturate(1.2);
+  animation: goa-palm-drift 8s ease-in-out infinite;
+}
+
+.goa-motion--waves {
+  width: 100%;
+  height: 42px;
+  bottom: 4vh;
+  opacity: 0.22;
+  background: repeating-radial-gradient(ellipse at 50% 100%, transparent 0 14px, var(--yellow) 15px 17px, transparent 18px 30px);
+  background-size: 88px 42px;
+  animation: goa-wave-slide 9s linear infinite;
 }
 
 /* Background canvas particles */
@@ -133,6 +183,7 @@ img, canvas { display: block; max-width: 100%; }
   font-weight: 800;
   font-size: 18px;
 }
+
 
 .brand-hh {
   color: #FFFFFF;
@@ -819,6 +870,7 @@ input[type="range"] {
     justify-content: center;
   }
 
+
   .postmark {
     display: none;
   }
@@ -863,4 +915,5 @@ input[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .polaroid--hero { animation: none; }
+  .goa-motion { animation: none; }
 }
